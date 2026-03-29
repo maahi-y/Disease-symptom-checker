@@ -39,13 +39,6 @@ this project around that same idea.
 
 ---
 
-## Project files
-
-
-disease-symptom-checker/ ├── symptom_checker.py ← all the code ├── README.md ← this file └── report.pdf ← project report
-
----
-
 ## Requirements
 
 Just Python 3. No need to install anything else.
