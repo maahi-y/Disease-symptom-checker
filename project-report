@@ -1,0 +1,139 @@
+Applying Bayes’ Rule to Medical Diagnosis
+A Disease Symptom Checker in Python
+
+Course: CSA2001 – Fundamentals of AI and ML
+Student: Maahi Yadav  |  25BCE10998
+VIT Bhopal University  |  March 27, 2026
+ 
+1. Why This Project?
+One of the most interesting concepts we covered in Unit 3 is the shift from hard-coded logic to probabilistic thinking. Before this unit, whenever I thought about programming, I thought about if-else statements and fixed rules. But Unit 3 kind of changed that perspective for me. It showed that in the real world, especially in something like medicine, you almost never have 100% certainty about anything.
+
+I chose to build a Disease Symptom Checker because it felt like the most natural way to see Bayes’ Rule actually doing something useful. It’s one thing to look at the formula on a slide and go “okay I get it”, and it’s a completely different thing to build something where you type in a symptom like fever and the program actually outputs a ranked list of diseases with percentages. That second thing felt much more real to me.
+
+I also honestly just wanted to pick a project I could explain to someone without needing to look at my notes. This one I can explain from scratch, and I think that counts for something.
+
+2. The Problem We’re Solving
+The tricky thing about symptoms is that they overlap a lot. A fever could mean the Flu, but it could also mean Malaria, Typhoid, or even just a bad Cold. If you tried to solve this with simple if-else logic, the code would get complicated really fast and still be inaccurate because you’re forcing binary answers onto something that is inherently probabilistic.
+
+Think about it this way — our Unit 3 slides gave the example of a patient with a stiff neck. The probability of meningitis given a stiff neck turned out to be only 0.0002, even though stiff neck is strongly associated with meningitis. That’s because the prior probability of meningitis in the general population is so low. That example really stuck with me because it shows how just looking at one symptom is not enough. You need to weigh it against how common or rare the disease actually is.
+
+By using Bayesian inference, I wanted to build something that doesn’t just give a yes or no answer, but instead ranks the possibilities. The goal was to take prior knowledge — how common a disease is in the population — and update it with evidence — the symptoms the user enters — to find the most likely diagnosis.
+
+3. The Logic — Bayes’ Theorem
+The entire engine of this program runs on one formula from Unit 3. We are trying to calculate P(D|S) — the probability of a disease D given that we observe a specific set of symptoms S.
+
+P(D | S)  =  P(S | D)  ×  P(D)  ÷  P(S)
+
+In my code I broke this down into three separate pieces:
+
+•	The Prior P(D): How likely is this disease in the general population? For example a Cold is more common than COVID so it starts with a higher prior.
+•	The Likelihood P(S|D): If someone definitely has the Flu, how likely are they to have a fever? This is stored in the symptoms_prob dictionary.
+•	The Posterior P(D|S): This is the final answer — the updated probability after combining the prior with the evidence from the symptoms.
+
+The normalisation step is what converts everything into proper percentages. Without it, you would just get raw scores like 0.0023 which don’t mean much. Dividing each score by the total of all scores makes them sum to 100%, which is the P(S) denominator in Bayes’ Rule.
+
+I want to be honest here — normalisation was the part that confused me the most at first. I kept getting tiny decimal numbers and didn’t understand what they meant. It only clicked when I re-read the slide where it says P(S) is just a scaling constant to make sure all probabilities add up to 1.
+
+Component	What it means	Where in my code
+P(D) — Prior	How common is the disease	diseases dictionary
+P(S|D) — Likelihood	Symptom probability given disease	symptoms_prob dictionary
+P(S) — Evidence	Normalisation constant	total = sum(results.values())
+P(D|S) — Posterior	Final diagnosis probability	Percentage output to user
+
+4. How I Built It
+I kept the tech stack as simple as possible — just Python 3, no external libraries. I specifically did not want to use Scikit-Learn or any ML library because that would hide all the probability math behind a single function call. The whole point was to code the Bayes’ Rule calculation myself so I actually understood what was happening at each step.
+
+4.1 The Prior Probabilities
+The first dictionary stores how common each disease is in general. These are the prior probabilities P(D) from Unit 3. I chose five diseases that share overlapping symptoms so the program has to actually work to differentiate them.
+
+diseases = {
+    "Flu":     0.30,   # most common
+    "Cold":    0.25,
+    "Malaria": 0.20,
+    "Typhoid": 0.15,
+    "COVID":   0.10    # least common prior
+}
+
+4.2 The Likelihood Table
+The second dictionary stores P(Symptom | Disease) for each combination. This is the conditional probability table. I chose 10 symptoms that are medically meaningful and set the probabilities based on general knowledge of how each disease presents.
+
+For example, loss_of_taste has a likelihood of 0.75 for COVID but only 0.05 for every other disease. This is the key symptom that makes COVID stand out in the results. Conversely, runny_nose has 0.90 for Cold and only 0.10 for Malaria, which is why those two diseases end up at opposite ends when you enter that symptom.
+
+symptoms_prob = {
+    "Flu":     { "fever": 0.90, "cough": 0.80, "chills": 0.70, ... }
+    "Cold":    { "fever": 0.30, "cough": 0.60, "chills": 0.25, ... }
+    "Malaria": { "fever": 0.95, "cough": 0.20, "chills": 0.95, ... }
+    "Typhoid": { "fever": 0.90, "cough": 0.15, "chills": 0.60, ... }
+    "COVID":   { "fever": 0.85, "cough": 0.85, "loss_of_taste": 0.75, ... }
+}
+
+4.3 The Calculation Loop
+The core logic loops through every disease, starts with its prior, and multiplies by the likelihood of each entered symptom. This is the product rule from Unit 3 — P(A ∩ B) = P(A|B) × P(B). After all diseases are scored, the results are normalised.
+
+for disease in diseases:
+    prob = diseases[disease]              # start with prior
+    for symptom in user_symptoms:
+        if symptom in symptoms_prob[disease]:
+            prob = prob * symptoms_prob[disease][symptom]
+    results[disease] = prob
+
+total = sum(results.values())             # P(S) denominator
+for disease in results:
+    results[disease] = round((results[disease] / total) * 100, 2)
+
+5. Results and Testing
+I tested three different inputs to verify the program gives logically correct results. Each one targets a specific disease through its most distinctive symptoms.
+
+Test 1 — fever, chills, body_ache → Malaria
+  Malaria     43.21%   ████████
+  Flu         28.14%   █████
+  Typhoid     16.82%   ███
+  COVID        8.74%   █
+  Cold         3.09%
+
+Malaria wins here because it has very high likelihoods for all three symptoms: fever (0.95), chills (0.95), body ache (0.80). Cold drops to last place because its chills likelihood is only 0.25, so it gets heavily penalised after that multiplication.
+
+Test 2 — runny_nose, sore_throat, cough → Cold
+  Cold        61.25%   ████████████
+  Flu         19.84%   ███
+  COVID       12.47%   ██
+  Typhoid      4.31%
+  Malaria      2.13%
+
+Cold dominates here because runny_nose (0.90) and sore_throat (0.85) are its most distinctive symptoms. Malaria falls to the bottom because it almost never causes runny nose — likelihood of only 0.10.
+
+Test 3 — loss_of_taste, fatigue, cough → COVID
+  COVID       71.33%   ██████████████
+  Flu         16.42%   ███
+  Malaria      7.21%   █
+  Typhoid      3.58%
+  Cold         1.46%
+
+This was the most interesting test. Even though fatigue and cough are fairly common across diseases, loss_of_taste is so specific to COVID (0.75 vs 0.05 for everything else) that it almost single-handedly pushes COVID to 71%. This perfectly illustrates how a single strong piece of evidence can completely shift the posterior probability — exactly what the Unit 3 slides were teaching with the meningitis and stiff neck example.
+
+6. A Quick Reality Check — Limitations
+I want to be upfront about where this project falls short, because I think acknowledging limitations is part of actually understanding the concept rather than just presenting a polished demo.
+
+•	Independence assumption: The program treats all symptoms as independent of each other. In Bayes’ terminology this is called the Naive Bayes assumption. In reality, fever and chills almost always appear together, so they are not truly independent. A more accurate model would account for correlations between symptoms.
+•	Hard-coded probabilities: Every number in the symptoms_prob table was set manually by me based on general knowledge, not real patient data. A production system would calculate these from thousands of actual medical records. My numbers are reasonable approximations but they are still guesses.
+•	Only 5 diseases and 10 symptoms: Real diagnostic tools consider hundreds of conditions and symptoms. This is a proof-of-concept, not a comprehensive tool.
+•	Not for real medical use: This should be obvious but I want to state it clearly. This program is for demonstrating Bayes’ Rule in a controlled educational setting. Please do not use it to diagnose anything.
+
+7. What I Learned
+Building this project genuinely changed how I think about the difference between classical programming and AI. In classical programming you tell the computer exactly what to do — if fever then flu. In probabilistic AI you give the system a framework of beliefs and let it calculate the most logical outcome given the evidence. That shift in thinking is what Unit 3 is really about and I feel like I understand it now in a way I didn’t before.
+
+The most valuable thing I took away was understanding what normalisation actually does. Before this I had always seen the P(S) denominator described as a scaling constant and I kind of glossed over it. Now I understand that without it you would have raw scores that are not comparable to each other. Dividing by the total is what converts everything into a proper probability distribution where all values add up to 1.
+
+I also learned that the prior probability matters a lot. Even if loss_of_taste strongly suggests COVID, if COVID had a prior of 0.01 instead of 0.10, the posterior would still be much lower. This is the exact lesson from the meningitis slide in Unit 3 — a strong symptom-disease relationship does not override a very low base rate.
+
+If I were to extend this project, I would want to load real probability values from a CSV file instead of hard-coding them, and maybe add a confidence threshold so the program says “not enough information” when the top result is below a certain percentage. That would make it feel more like a real decision support system.
+
+8. Conclusion
+This project started as an attempt to understand Bayes’ Rule beyond just memorising the formula, and I think it achieved that. The Disease Symptom Checker correctly predicts Malaria for fever and chills, Cold for runny nose and sore throat, and COVID for loss of taste — which means the underlying probability logic is working the way it should.
+
+More importantly, every part of the code maps back to a specific concept from Unit 3: the prior probability, the conditional probability, the product rule, the normalisation step, and the posterior probability. I did not use any external AI libraries. The intelligence in this program is just Bayes’ Rule applied carefully, which is kind of the point.
+
+References
+•	CSA2001 Lecture Slides – Unit 3: From Classical Statistics to Machine Learning, VIT Bhopal University
+•	Russell, S., & Norvig, P. (2021). Artificial Intelligence: A Modern Approach. Pearson.
+•	Python 3 Documentation – https://docs.python.org/3/
