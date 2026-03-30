@@ -39,16 +39,6 @@ this project around that same idea.
 
 ---
 
-## Requirements
-
-Just Python 3. No need to install anything else.
-
-Check your Python version:
-
-python --version
-
----
-
 ## How to run it
 
 
